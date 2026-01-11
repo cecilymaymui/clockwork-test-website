@@ -4,8 +4,279 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clockwork Mania</title>
+    <style>
+      :root {
+        --red: #e10600;
+        --red2: #ff2a2a;
+        --black: #0a0a0c;
+        --black2: #121218;
+        --text: #f5f5f7;
+        --muted: rgba(245, 245, 247, 0.72);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        color: var(--text);
+        background: radial-gradient(1200px 600px at 20% 20%, rgba(225, 6, 0, 0.35), transparent 55%),
+                    radial-gradient(900px 500px at 80% 70%, rgba(255, 42, 42, 0.18), transparent 60%),
+                    linear-gradient(160deg, var(--black) 0%, var(--black2) 60%, #07070a 100%);
+        overflow: hidden;
+      }
+
+      /* Subtle moving scanline texture */
+      .scanlines {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.03),
+          rgba(255, 255, 255, 0.03) 1px,
+          rgba(0, 0, 0, 0) 3px,
+          rgba(0, 0, 0, 0) 6px
+        );
+        mix-blend-mode: overlay;
+        opacity: 0.25;
+        animation: scanMove 6s linear infinite;
+      }
+      @keyframes scanMove {
+        from { transform: translateY(0); }
+        to   { transform: translateY(24px); }
+      }
+
+      /* Floating glowing orbs */
+      .orb {
+        position: absolute;
+        width: 520px;
+        height: 520px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(255, 42, 42, 0.55), rgba(225, 6, 0, 0.06) 55%, transparent 70%);
+        filter: blur(10px);
+        animation: floaty 9s ease-in-out infinite;
+        opacity: 0.9;
+      }
+      .orb.o1 { top: -180px; left: -140px; animation-duration: 10s; }
+      .orb.o2 { bottom: -220px; right: -180px; width: 640px; height: 640px; opacity: 0.75; animation-duration: 12s; }
+      @keyframes floaty {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(30px, 18px) scale(1.04); }
+      }
+
+      /* Center layout */
+      .wrap {
+        height: 100%;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .card {
+        width: min(920px, 92vw);
+        border-radius: 22px;
+        padding: 56px 42px;
+        background: linear-gradient(180deg, rgba(18, 18, 24, 0.82), rgba(10, 10, 12, 0.68));
+        border: 1px solid rgba(255, 42, 42, 0.28);
+        box-shadow:
+          0 18px 60px rgba(0, 0, 0, 0.55),
+          0 0 0 1px rgba(225, 6, 0, 0.12) inset;
+        backdrop-filter: blur(10px);
+        transform: translateY(10px);
+        opacity: 0;
+        animation: cardIn 900ms cubic-bezier(.2,.9,.2,1) forwards;
+      }
+      @keyframes cardIn {
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 42, 42, 0.35);
+        background: rgba(225, 6, 0, 0.08);
+        color: var(--muted);
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
+      }
+
+      /* Little animated pulse dot */
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--red2);
+        box-shadow: 0 0 16px rgba(255, 42, 42, 0.85);
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.85; }
+        50% { transform: scale(1.35); opacity: 1; }
+      }
+
+      .title {
+        margin: 18px 0 12px;
+        font-size: clamp(2.6rem, 5vw, 4.4rem);
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+        font-weight: 850;
+        position: relative;
+      }
+
+      /* Animated red glow underline */
+      .title::after {
+        content: "";
+        display: block;
+        height: 4px;
+        width: min(260px, 48%);
+        margin-top: 14px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, rgba(255, 42, 42, 0.95), rgba(225, 6, 0, 0.35), transparent);
+        filter: drop-shadow(0 0 12px rgba(255, 42, 42, 0.6));
+        animation: shimmer 2.6s ease-in-out infinite;
+      }
+      @keyframes shimmer {
+        0% { transform: translateX(-12px); opacity: 0.55; }
+        50% { transform: translateX(12px); opacity: 1; }
+        100% { transform: translateX(-12px); opacity: 0.55; }
+      }
+
+      .subtitle {
+        margin: 0;
+        max-width: 62ch;
+        color: var(--muted);
+        font-size: 1.1rem;
+        line-height: 1.6;
+      }
+
+      /* Animated “gear-ish” ring */
+      .ring {
+        position: absolute;
+        inset: -90px;
+        margin: auto;
+        width: 560px;
+        height: 560px;
+        border-radius: 50%;
+        border: 1px dashed rgba(255, 42, 42, 0.22);
+        box-shadow: 0 0 0 1px rgba(255, 42, 42, 0.06) inset;
+        animation: spin 18s linear infinite;
+        opacity: 0.45;
+        pointer-events: none;
+      }
+      .ring::before,
+      .ring::after {
+        content: "";
+        position: absolute;
+        inset: 26px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 42, 42, 0.16);
+      }
+      .ring::after {
+        inset: 56px;
+        border-style: dotted;
+        opacity: 0.8;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Button row */
+      .actions {
+        margin-top: 26px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .btn {
+        appearance: none;
+        border: 1px solid rgba(255, 42, 42, 0.35);
+        background: rgba(225, 6, 0, 0.12);
+        color: var(--text);
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-weight: 650;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+        background: rgba(225, 6, 0, 0.18);
+        border-color: rgba(255, 42, 42, 0.6);
+      }
+      .btn:active { transform: translateY(0); }
+
+      /* Gloss sweep animation on hover */
+      .btn::after {
+        content: "";
+        position: absolute;
+        top: -40%;
+        left: -60%;
+        width: 45%;
+        height: 180%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+        transform: rotate(18deg);
+        opacity: 0;
+      }
+      .btn:hover::after {
+        animation: sweep 700ms ease forwards;
+      }
+      @keyframes sweep {
+        0% { left: -60%; opacity: 0; }
+        20% { opacity: 0.45; }
+        100% { left: 130%; opacity: 0; }
+      }
+
+      /* Small footer */
+      .footer {
+        margin-top: 18px;
+        font-size: 0.92rem;
+        color: rgba(245, 245, 247, 0.55);
+      }
+
+      /* Respect reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
+        .card { opacity: 1; transform: none; }
+      }
+    </style>
   </head>
-  <body style="margin:0; display:flex; align-items:center; justify-content:center; height:100vh; font-family: Arial, sans-serif;">
-    <h1 style="font-size: 3rem;">Clockwork Mania</h1>
+
+  <body>
+    <div class="orb o1"></div>
+    <div class="orb o2"></div>
+    <div class="scanlines"></div>
+
+    <main class="wrap">
+      <div class="card">
+        <div class="ring" aria-hidden="true"></div>
+
+        <div class="kicker">
+          <span class="dot" aria-hidden="true"></span>
+          Red & Black • Animated landing page
+        </div>
+
+        <h1 class="title">Clockwork Mania</h1>
+        <p class="subtitle">
+          A clean, high-contrast red-and-black theme with subtle motion—glow, scanlines,
+          floating orbs, and a rotating ring.
+        </p>
+
+        <div class="actions">
+          <button class="btn" onclick="alert('Clockwork Mania!')">Click Me</button>
+          <button class="btn" onclick="document.body.requestFullscreen?.()">Fullscreen</button>
+        </div>
+
+        <div class="footer">Single-file HTML + CSS. No external assets.</div>
+      </div>
+    </main>
   </body>
 </html>
